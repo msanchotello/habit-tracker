@@ -110,7 +110,6 @@
   .day-cell.future{opacity:.5}
   .day-label{font-size:9px;color:var(--text-muted);font-weight:800;text-transform:uppercase;line-height:1}
   .day-num{font-size:16px;font-weight:900;margin:2px 0;line-height:1}
-  .day-icon{font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;width:100%}
 
   .week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
   .week-nav button{background:var(--surface);border:2px solid var(--border);border-bottom-width:3px;border-radius:12px;width:40px;height:40px;font-size:18px;color:var(--text);font-weight:900;cursor:pointer}
@@ -433,9 +432,7 @@ function renderWeek(justCheckedId){
     const cell = document.createElement('div');
     cell.className = 'day-cell'+(isToday?' today':'')+(selectedDay===ds?' selected':'')+(complete?' complete':'')+(missed?' missed':'')+(isFuture?' future':'');
     const label = d.toLocaleDateString(undefined,{weekday:'short'}).slice(0,3);
-    const icon = complete ? '✓' : (isFuture ? '' : (isToday ? '·' : (dayTasks.length===0 ? '' : '✗')));
-    const iconColor = complete ? 'var(--green)' : ((!isFuture && !isToday && dayTasks.length>0) ? 'var(--red)' : 'var(--text-muted)');
-    cell.innerHTML = `<div class="day-label">${label}</div><div class="day-num">${d.getDate()}</div><div class="day-icon" style="color:${iconColor};font-weight:900">${icon}</div>`;
+    cell.innerHTML = `<div class="day-label">${label}</div><div class="day-num">${d.getDate()}</div>`;
     cell.addEventListener('click', ()=>{ selectedDay = ds; renderWeek(); });
     strip.appendChild(cell);
   }
