@@ -1,7 +1,8 @@
 {
   "name": "Streak",
   "short_name": "Streak",
-  "start_url": "/",
+  "start_url": "/habit-tracker/",
+  "scope": "/habit-tracker/",
   "display": "standalone",
   "background_color": "#FFFFFF",
   "theme_color": "#58CC02",
