@@ -236,7 +236,22 @@
   </nav>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, set, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDpk1wKvYinIVBfrbGQ9cvQUdomSz-e3tI",
+  authDomain: "habit-tracker-53214.firebaseapp.com",
+  databaseURL: "https://habit-tracker-53214-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "habit-tracker-53214",
+  storageBucket: "habit-tracker-53214.firebasestorage.app",
+  messagingSenderId: "192102592682",
+  appId: "1:192102592682:web:16d9ef55722cf3464fa0d3"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
 /* ============== USERS ============== */
 const USERS = {
   'Miguel': { initials: 'M', color: '#1CB0F6', bg: '#e8f7fe' },
@@ -247,15 +262,9 @@ const USERS = {
 const SESSION_KEY = 'streak-session';
 let currentUser = null;
 
-function getSession(){
-  return localStorage.getItem(SESSION_KEY);
-}
-function setSession(username){
-  localStorage.setItem(SESSION_KEY, username);
-}
-function clearSession(){
-  localStorage.removeItem(SESSION_KEY);
-}
+function getSession(){ return localStorage.getItem(SESSION_KEY); }
+function setSession(u){ localStorage.setItem(SESSION_KEY, u); }
+function clearSession(){ localStorage.removeItem(SESSION_KEY); }
 
 function showLoginScreen(){
   const existing = document.getElementById('loginScreen');
@@ -272,7 +281,6 @@ function showLoginScreen(){
     </div>
   `;
   document.body.appendChild(screen);
-
   const list = screen.querySelector('#userList');
   Object.entries(USERS).forEach(([username, data]) => {
     const btn = document.createElement('button');
@@ -284,11 +292,7 @@ function showLoginScreen(){
         <span class="login-user-sub">Tap to continue</span>
       </div>
     `;
-    btn.addEventListener('click', () => {
-      setSession(username);
-      screen.remove();
-      initApp(username);
-    });
+    btn.addEventListener('click', () => { setSession(username); screen.remove(); initApp(username); });
     list.appendChild(btn);
   });
 }
@@ -302,18 +306,24 @@ const defaultState = {
   theme: 'auto',
   onboarded: false,
 };
-let state;
-let STORAGE_KEY;
+let state = structuredClone(defaultState);
+let dbUnsubscribe = null;
 
-function load(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return structuredClone(defaultState);
-    return {...structuredClone(defaultState), ...JSON.parse(raw)};
-  }catch(e){ return structuredClone(defaultState); }
-}
 function save(){
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+  if(!currentUser) return;
+  set(ref(db, 'users/' + currentUser), state).catch(e => console.error('Firebase save error', e));
+}
+
+function startSync(username){
+  if(dbUnsubscribe) dbUnsubscribe();
+  const userRef = ref(db, 'users/' + username);
+  dbUnsubscribe = onValue(userRef, snapshot => {
+    const data = snapshot.val();
+    state = data ? {...structuredClone(defaultState), ...data} : structuredClone(defaultState);
+    recomputeStreaks();
+    render();
+    if(!state.onboarded) showOnboarding();
+  });
 }
 
 /* ============== DATE HELPERS ============== */
@@ -324,8 +334,8 @@ function fmtDate(d){
 function todayStr(){ return fmtDate(new Date()); }
 function parseDate(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
 function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
-function startOfWeek(d){ // Monday start
-  const x = new Date(d); const day = x.getDay(); // 0 Sun..6 Sat
+function startOfWeek(d){
+  const x = new Date(d); const day = x.getDay();
   const diff = (day===0?-6:1-day);
   x.setDate(x.getDate()+diff); x.setHours(0,0,0,0); return x;
 }
@@ -334,27 +344,22 @@ function longDate(d){
 }
 
 /* ============== STREAK LOGIC ============== */
-function tasksForDay(dateStr){ return state.dayTasks[dateStr] || []; }
+function tasksForDay(dateStr){ return (state.dayTasks && state.dayTasks[dateStr]) || []; }
 function isDayComplete(dateStr){
   const tasks = tasksForDay(dateStr);
   if(tasks.length===0) return false;
-  const rec = state.records[dateStr] || [];
+  const rec = (state.records && state.records[dateStr]) || [];
   return tasks.every(t => rec.includes(t.id));
 }
 function recomputeStreaks(){
-  // Walk backwards from today; today doesn't break streak if incomplete (grace)
   let streak = 0;
   let d = new Date(); d.setHours(0,0,0,0);
   const today = fmtDate(d);
-  // If today complete, count it; if not complete, skip today and continue from yesterday
   if(isDayComplete(today)) { streak++; d = addDays(d,-1); }
   else { d = addDays(d,-1); }
-  while(isDayComplete(fmtDate(d))){
-    streak++;
-    d = addDays(d,-1);
-  }
+  while(isDayComplete(fmtDate(d))){ streak++; d = addDays(d,-1); }
   state.streak = streak;
-  if(streak > state.bestStreak) state.bestStreak = streak;
+  if(streak > (state.bestStreak||0)) state.bestStreak = streak;
 }
 
 /* ============== RENDER ============== */
@@ -368,33 +373,24 @@ function render(justCheckedId){
 }
 
 function renderTop(){
-  $('streakNum').textContent = state.streak;
-  $('dayS').textContent = state.streak===1?'':'s';
-  $('bestNum').textContent = state.bestStreak;
+  $('streakNum').textContent = state.streak||0;
+  $('dayS').textContent = (state.streak||0)===1?'':'s';
+  $('bestNum').textContent = state.bestStreak||0;
 }
 
 function renderToday(justCheckedId){
   const today = new Date();
   $('dateHead').textContent = today.toLocaleDateString(undefined,{weekday:'long'});
   $('dateSub').textContent = today.toLocaleDateString(undefined,{month:'long', day:'numeric', year:'numeric'});
-
   const list = $('taskList'); list.innerHTML='';
   const empty = $('emptyToday'); empty.innerHTML='';
   const dateStr = todayStr();
   const tasks = tasksForDay(dateStr);
-  const rec = state.records[dateStr] || [];
-
+  const rec = (state.records && state.records[dateStr]) || [];
   if(tasks.length===0){
-    empty.innerHTML = `<div class="empty">
-      <div class="empty-emoji">🎯</div>
-      <h3>No tasks for today</h3>
-      <p>Add tasks for today to start a streak.</p>
-      <button class="btn" onclick="switchView('edit')">Add Tasks</button>
-    </div>`;
-    updateProgress(0,0);
-    return;
+    empty.innerHTML = `<div class="empty"><div class="empty-emoji">🎯</div><h3>No tasks for today</h3><p>Add tasks for today to start a streak.</p><button class="btn" onclick="switchView('edit')">Add Tasks</button></div>`;
+    updateProgress(0,0); return;
   }
-
   tasks.forEach(t=>{
     const done = rec.includes(t.id);
     const li = document.createElement('li');
@@ -418,17 +414,14 @@ function escapeHtml(s){ return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",
 /* Week view state */
 let weekAnchor = startOfWeek(new Date());
 let selectedDay = todayStr();
-
 /* Edit view state */
 let editDay = todayStr();
 
 function renderWeek(justCheckedId){
   const strip = $('weekStrip'); strip.innerHTML='';
   const today = todayStr();
-  const monthName = weekAnchor.toLocaleDateString(undefined,{month:'long', year:'numeric'});
   const sameWeek = fmtDate(startOfWeek(new Date()))===fmtDate(weekAnchor);
-  $('weekTitle').textContent = sameWeek ? 'This Week' : monthName;
-
+  $('weekTitle').textContent = sameWeek ? 'This Week' : weekAnchor.toLocaleDateString(undefined,{month:'long', year:'numeric'});
   for(let i=0;i<7;i++){
     const d = addDays(weekAnchor,i);
     const ds = fmtDate(d);
@@ -438,14 +431,9 @@ function renderWeek(justCheckedId){
     const dayTasks = tasksForDay(ds);
     const missed = !complete && !isFuture && !isToday && dayTasks.length>0;
     const cell = document.createElement('div');
-    cell.className = 'day-cell'
-      + (isToday?' today':'')
-      + (selectedDay===ds?' selected':'')
-      + (complete?' complete':'')
-      + (missed?' missed':'')
-      + (isFuture?' future':'');
+    cell.className = 'day-cell'+(isToday?' today':'')+(selectedDay===ds?' selected':'')+(complete?' complete':'')+(missed?' missed':'')+(isFuture?' future':'');
     const label = d.toLocaleDateString(undefined,{weekday:'short'}).slice(0,3);
-    const icon = complete?'✅': (isFuture?'⬜': (isToday?'⭐': (dayTasks.length===0?'·':'❌')));
+    const icon = complete?'✅':(isFuture?'⬜':(isToday?'⭐':(dayTasks.length===0?'·':'❌')));
     cell.innerHTML = `<div class="day-label">${label}</div><div class="day-num">${d.getDate()}</div><div class="day-icon">${icon}</div>`;
     cell.addEventListener('click', ()=>{ selectedDay = ds; renderWeek(); });
     strip.appendChild(cell);
@@ -456,7 +444,7 @@ function renderWeek(justCheckedId){
 function renderDayDetail(justCheckedId){
   const wrap = $('dayDetail'); wrap.innerHTML='';
   const ds = selectedDay; const d = parseDate(ds);
-  const rec = state.records[ds] || [];
+  const rec = (state.records && state.records[ds]) || [];
   const today = todayStr();
   const yesterday = fmtDate(addDays(new Date(), -1));
   const isEditable = ds === today || ds === yesterday;
@@ -491,34 +479,22 @@ function renderEdit(){
   const today = todayStr();
   const isPast = editDay < today;
   const isToday = editDay === today;
-
   $('editDateHead').textContent = isToday ? 'Today' : d.toLocaleDateString(undefined,{weekday:'long'});
   $('editDateSub').textContent = d.toLocaleDateString(undefined,{month:'long', day:'numeric', year:'numeric'});
   $('editDayTitle').textContent = isToday ? 'Today' : d.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
-  $('editPrev').disabled = false;
-  $('editNext').disabled = false;
-
   const tasks = tasksForDay(editDay);
-
   if(isPast){
     $('addRowWrap').style.display = 'none';
-    if(tasks.length===0){
-      wrap.innerHTML = `<div class="empty"><div class="empty-emoji">📅</div><h3>No tasks</h3><p>No tasks were set for this day.</p></div>`;
-    }
+    if(tasks.length===0) wrap.innerHTML = `<div class="empty"><div class="empty-emoji">📅</div><h3>No tasks</h3><p>No tasks were set for this day.</p></div>`;
   } else {
     $('addRowWrap').style.display = 'flex';
-    if(tasks.length===0){
-      wrap.innerHTML = `<div class="empty"><div class="empty-emoji">✏️</div><h3>No tasks yet</h3><p>Add tasks for this day below.</p></div>`;
-    }
+    if(tasks.length===0) wrap.innerHTML = `<div class="empty"><div class="empty-emoji">✏️</div><h3>No tasks yet</h3><p>Add tasks for this day below.</p></div>`;
   }
-
   tasks.forEach((t,i)=>{
     const row = document.createElement('div');
     row.className='edit-row';
     if(isPast){
-      row.innerHTML = `
-        <div class="name" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</div>
-      `;
+      row.innerHTML = `<div class="name" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</div>`;
     } else {
       row.innerHTML = `
         <button class="icon-btn" data-act="up" ${i===0?'disabled style="opacity:.3"':''} aria-label="Move up">↑</button>
@@ -529,34 +505,29 @@ function renderEdit(){
       row.querySelectorAll('button').forEach(b=>{
         b.addEventListener('click',()=>{
           const act = b.dataset.act;
+          if(!state.dayTasks) state.dayTasks = {};
           const dayTasks = state.dayTasks[editDay];
           if(act==='del'){
             row.classList.add('removing');
-            setTimeout(()=>{ dayTasks.splice(i,1); recomputeStreaks(); save(); render(); },220);
+            setTimeout(()=>{ dayTasks.splice(i,1); recomputeStreaks(); save(); },220);
           } else if(act==='up' && i>0){
-            [dayTasks[i-1], dayTasks[i]] = [dayTasks[i], dayTasks[i-1]];
-            save(); render();
+            [dayTasks[i-1], dayTasks[i]] = [dayTasks[i], dayTasks[i-1]]; save();
           } else if(act==='down' && i<dayTasks.length-1){
-            [dayTasks[i+1], dayTasks[i]] = [dayTasks[i], dayTasks[i+1]];
-            save(); render();
+            [dayTasks[i+1], dayTasks[i]] = [dayTasks[i], dayTasks[i+1]]; save();
           }
         });
       });
     }
     wrap.appendChild(row);
   });
-
-  const label = isPast ? 'Past day — read only' : `${tasks.length} task${tasks.length!==1?'s':''} for this day`;
-  $('lastEdit').textContent = label;
+  $('lastEdit').textContent = isPast ? 'Past day — read only' : `${tasks.length} task${tasks.length!==1?'s':''} for this day`;
 }
 
 /* ============== ACTIONS ============== */
-function toggleTask(id){
-  const ds = todayStr();
-  toggleTaskOnDay(id, ds);
-}
+function toggleTask(id){ toggleTaskOnDay(id, todayStr()); }
 
 function toggleTaskOnDay(id, ds){
+  if(!state.records) state.records = {};
   const rec = state.records[ds] ? [...state.records[ds]] : [];
   const idx = rec.indexOf(id);
   const wasComplete = isDayComplete(ds);
@@ -567,22 +538,19 @@ function toggleTaskOnDay(id, ds){
   recomputeStreaks();
   save();
   render(justCheckedId);
-  if(!wasComplete && nowComplete && ds === todayStr()){
-    celebrate();
-    pulseFlame();
-  }
+  if(!wasComplete && nowComplete && ds === todayStr()){ celebrate(); pulseFlame(); }
 }
 
 function addTask(){
   const inp = $('newTaskInput');
   const name = inp.value.trim();
   if(!name) return;
+  if(!state.dayTasks) state.dayTasks = {};
   if(!state.dayTasks[editDay]) state.dayTasks[editDay] = [];
   state.dayTasks[editDay].push({id: 't_'+Date.now()+'_'+Math.random().toString(36).slice(2,6), name});
   inp.value='';
   recomputeStreaks();
   save();
-  render();
 }
 
 /* ============== NAV ============== */
@@ -592,7 +560,6 @@ function switchView(name){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
 }
 document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));
-
 $('weekPrev').addEventListener('click',()=>{ weekAnchor = addDays(weekAnchor,-7); renderWeek(); });
 $('weekNext').addEventListener('click',()=>{ weekAnchor = addDays(weekAnchor, 7); renderWeek(); });
 $('addTaskBtn').addEventListener('click', addTask);
@@ -618,16 +585,13 @@ function pulseFlame(){
   const f = $('flame'); f.classList.remove('pulse'); void f.offsetWidth; f.classList.add('pulse');
 }
 function celebrate(){
-  // glow
   const g = document.createElement('div'); g.className='glow-overlay';
   document.body.appendChild(g); setTimeout(()=>g.remove(),1200);
-  // confetti
   const layer = document.createElement('div'); layer.className='confetti-layer';
   document.body.appendChild(layer);
   const colors = ['#58CC02','#FF9600','#1CB0F6','#FF4B4B','#CE82FF','#FFD600'];
   for(let i=0;i<60;i++){
-    const c = document.createElement('div');
-    c.className='confetti';
+    const c = document.createElement('div'); c.className='confetti';
     c.style.left = Math.random()*100+'%';
     c.style.background = colors[Math.floor(Math.random()*colors.length)];
     c.style.animationDuration = (1.6+Math.random()*1.4)+'s';
@@ -648,23 +612,14 @@ function toast(msg){
 let currentDay = todayStr();
 setInterval(()=>{
   const now = todayStr();
-  if(now !== currentDay){
-    currentDay = now;
-    recomputeStreaks();
-    save();
-    render();
-  }
+  if(now !== currentDay){ currentDay = now; recomputeStreaks(); save(); }
 }, 30*1000);
 
 /* ============== ONBOARDING ============== */
 function showOnboarding(){
-  const bg = document.createElement('div'); bg.className='modal-bg';
-  bg.innerHTML = `<div class="modal">
-    <div class="big">🔥</div>
-    <h2>Welcome to Streak</h2>
-    <p>Build daily habits, keep your streak alive. Add tasks for each day — you can set different tasks for different days.</p>
-    <button class="btn full" id="obStart">Let's go</button>
-  </div>`;
+  if(document.getElementById('onboardingModal')) return;
+  const bg = document.createElement('div'); bg.className='modal-bg'; bg.id='onboardingModal';
+  bg.innerHTML = `<div class="modal"><div class="big">🔥</div><h2>Welcome to Streak</h2><p>Build daily habits, keep your streak alive. Add tasks for each day — you can set different tasks for different days.</p><button class="btn full" id="obStart">Let's go</button></div>`;
   document.body.appendChild(bg);
   bg.querySelector('#obStart').addEventListener('click',()=>{
     state.onboarded = true; save(); bg.remove(); switchView('edit'); $('newTaskInput').focus();
@@ -674,32 +629,17 @@ function showOnboarding(){
 /* ============== INIT ============== */
 function initApp(username){
   currentUser = username;
-  STORAGE_KEY = 'streak-' + username;
-  state = load();
-  // update topbar avatar
   const data = USERS[username];
   const logoutBtn = $('logoutBtn');
   logoutBtn.textContent = data.initials;
-  logoutBtn.style.background = data.bg;
-  logoutBtn.style.color = data.color;
-  logoutBtn.style.border = 'none';
-  logoutBtn.style.borderRadius = '50%';
-  logoutBtn.style.width = '36px';
-  logoutBtn.style.height = '36px';
-  logoutBtn.style.fontSize = '15px';
-  logoutBtn.style.fontWeight = '900';
-  logoutBtn.style.cursor = 'pointer';
-  logoutBtn.style.flexShrink = '0';
+  logoutBtn.style.cssText = `background:${data.bg};color:${data.color};border:none;border-radius:50%;width:36px;height:36px;font-size:15px;font-weight:900;cursor:pointer;flex-shrink:0;`;
   applyTheme();
-  recomputeStreaks();
-  save();
-  render();
-  if(!state.onboarded) showOnboarding();
+  startSync(username);
 }
 
 $('logoutBtn').addEventListener('click', () => {
-  clearSession();
-  currentUser = null;
+  if(dbUnsubscribe){ dbUnsubscribe(); dbUnsubscribe = null; }
+  clearSession(); currentUser = null;
   showLoginScreen();
 });
 
