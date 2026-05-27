@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="icon.png" />
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" type="image/png" href="icon.png" />
-<title>Streak</title>
+<title>Daily Habit Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -33,15 +33,7 @@
     --safe-bottom: env(safe-area-inset-bottom, 0px);
   }
   @media (prefers-color-scheme: dark){
-    :root.auto{
-      --bg:#131F24;
-      --surface:#1F2C32;
-      --surface-2:#283A40;
-      --text:#F1F7FB;
-      --text-muted:#8AA0A8;
-      --border:#2C3E45;
-      --shadow:0 4px 0 rgba(0,0,0,0.4);
-    }
+    :root.auto{ }
   }
   :root.dark{
     --bg:#131F24; --surface:#1F2C32; --surface-2:#283A40;
@@ -89,6 +81,9 @@
   @keyframes popIn{0%{transform:scale(.6)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
   .task-name{flex:1;font-size:16px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .task.done .task-name{color:var(--text-muted)}
+  .task.missed-past{background:color-mix(in srgb,var(--red) 10%,var(--surface));border-color:var(--red)}
+  .task.missed-past .checkbox{border-color:var(--red);color:var(--red);background:color-mix(in srgb,var(--red) 15%,var(--bg))}
+  .task.missed-past .task-name{color:var(--red)}
 
   /* Empty */
   .empty{text-align:center;padding:40px 20px;color:var(--text-muted)}
@@ -104,25 +99,52 @@
   .btn.full{width:100%}
 
   /* Week view */
+  .week-view-toggle{display:flex;gap:6px;margin-bottom:14px}
+  .week-view-btn{flex:1;padding:8px;border:2px solid var(--border);border-bottom-width:3px;border-radius:12px;background:var(--surface);font-family:inherit;font-weight:800;font-size:13px;color:var(--text);cursor:pointer}
+  .week-view-btn.active{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 12%,var(--surface));color:var(--blue)}
   .week-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:20px}
   .day-cell{aspect-ratio:1/1.4;background:var(--surface);border:2px solid var(--border);border-bottom-width:3px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;padding:4px 2px;min-height:64px;overflow:hidden}
   .day-cell:active{transform:translateY(1px);border-bottom-width:2px}
   .day-cell.today{border-color:var(--blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 30%,transparent)}
-  .day-cell.selected{background:color-mix(in srgb,var(--blue) 12%, var(--surface))}
+  .day-cell.selected{background:var(--blue);border-color:var(--blue)}
+  .day-cell.selected .day-label,.day-cell.selected .day-num{color:#fff}
+  .day-cell.selected.complete{background:var(--green-dark);border-color:var(--green-dark)}
+  .day-cell.selected.missed{background:var(--red);border-color:#c93838}
   .day-cell.complete{background:color-mix(in srgb,var(--green) 18%, var(--surface));border-color:var(--green)}
   .day-cell.missed{background:color-mix(in srgb,var(--red) 12%, var(--surface));border-color:var(--red)}
   .day-cell.future{}
   .day-label{font-size:9px;color:var(--text-muted);font-weight:800;text-transform:uppercase;line-height:1}
   .day-num{font-size:16px;font-weight:900;margin:2px 0;line-height:1;color:var(--text)}
   .day-cell.past .day-label,.day-cell.past .day-num{color:var(--text-muted);opacity:.5}
+  /* Calendar month view */
+  .cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
+  .cal-dow{text-align:center;font-size:10px;font-weight:800;color:var(--text-muted);text-transform:uppercase;padding:4px 0}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:16px}
+  .cal-cell{aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;cursor:pointer;border:2px solid transparent}
+  .cal-cell.empty{cursor:default}
+  .cal-cell.cal-today{border-color:var(--blue)}
+  .cal-cell.cal-selected{background:var(--blue);color:#fff !important;border-color:var(--blue)}
+  .cal-cell.cal-selected.cal-complete{background:var(--green-dark);border-color:var(--green-dark)}
+  .cal-cell.cal-selected.cal-missed{background:var(--red);border-color:#c93838}
+  .cal-cell.cal-complete{background:color-mix(in srgb,var(--green) 30%,var(--surface));color:var(--green-dark)}
+  .cal-cell.cal-missed{background:color-mix(in srgb,var(--red) 25%,var(--surface));color:var(--red)}
+  .cal-cell.cal-future,.cal-cell.cal-notask{color:var(--text-muted)}
 
   .week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
   .week-nav button{background:var(--surface);border:2px solid var(--border);border-bottom-width:3px;border-radius:12px;width:40px;height:40px;font-size:18px;color:var(--text);font-weight:900;cursor:pointer}
   .week-nav button:active{transform:translateY(1px);border-bottom-width:2px}
   .week-nav-title{font-weight:800;font-size:15px}
 
-  .day-detail{background:var(--surface);border:2px solid var(--border);border-radius:16px;padding:16px;margin-top:8px}
-  .day-detail h4{margin:0 0 10px;font-size:16px}
+  /* Week all-tasks list */
+  .week-day-block{margin-bottom:18px}
+  .week-day-heading{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .week-day-heading-label{font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.5px}
+  .week-day-heading-label.is-today{color:var(--blue)}
+  .week-day-heading-label.is-complete{color:var(--green)}
+  .week-day-heading-label.is-missed{color:var(--red)}
+  .week-day-heading-date{font-size:12px;color:var(--text-muted);font-weight:700}
+  .week-day-heading-line{flex:1;height:2px;background:var(--border);border-radius:999px}
+  .week-no-tasks{font-size:13px;color:var(--text-muted);font-weight:700;padding:6px 0}
 
   /* Edit view */
   .edit-row{display:flex;align-items:center;gap:8px;background:var(--surface);border:2px solid var(--border);border-bottom-width:3px;border-radius:14px;padding:8px 8px 8px 14px;margin-bottom:10px;transition:transform .25s, opacity .25s}
@@ -164,7 +186,40 @@
   .glow-overlay{position:fixed;inset:0;pointer-events:none;z-index:150;background:radial-gradient(circle at center, color-mix(in srgb,var(--green) 30%, transparent), transparent 60%);opacity:0;animation:glow 1.2s ease}
   @keyframes glow{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
 
-  /* Login screen */
+  /* Recurrent badge */
+  .recurrent-badge{font-size:11px;color:var(--blue);font-weight:800;margin-left:4px;flex-shrink:0}
+
+  /* Recurrent modal */
+  .rec-modal{background:var(--bg);border-radius:20px;padding:20px;max-width:380px;width:100%;text-align:left}
+  .rec-modal h3{margin:0 0 16px;font-size:18px;font-weight:900}
+  .rec-section{margin-bottom:16px}
+  .rec-label{font-size:12px;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+  .rec-type-row{display:flex;gap:8px}
+  .rec-type-btn{flex:1;padding:10px;border:2px solid var(--border);border-bottom-width:3px;border-radius:12px;background:var(--surface);font-family:inherit;font-weight:800;font-size:14px;color:var(--text);cursor:pointer}
+  .rec-type-btn.active{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 12%,var(--surface));color:var(--blue)}
+  .rec-every-row{display:flex;align-items:center;gap:10px}
+  .rec-every-row input[type=number]{width:64px;background:var(--surface);border:2px solid var(--border);border-bottom-width:3px;border-radius:12px;padding:10px 12px;font-family:inherit;font-weight:800;font-size:16px;color:var(--text);text-align:center;outline:none}
+  .rec-every-row input[type=number]:focus{border-color:var(--blue)}
+  .rec-every-row span{font-size:14px;font-weight:700;color:var(--text-muted)}
+  .rec-end-row{display:flex;gap:8px;margin-top:8px}
+  .rec-end-btn{flex:1;padding:10px;border:2px solid var(--border);border-bottom-width:3px;border-radius:12px;background:var(--surface);font-family:inherit;font-weight:800;font-size:13px;color:var(--text);cursor:pointer}
+  .rec-end-btn.active{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 12%,var(--surface));color:var(--blue)}
+  .rec-end-date{width:100%;margin-top:8px;background:var(--surface);border:2px solid var(--border);border-bottom-width:3px;border-radius:12px;padding:10px 12px;font-family:inherit;font-weight:700;font-size:14px;color:var(--text);outline:none}
+  .rec-end-date:focus{border-color:var(--blue)}
+  .rec-days-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .rec-day-btn{aspect-ratio:1;border:2px solid var(--border);border-bottom-width:3px;border-radius:10px;background:var(--surface);font-family:inherit;font-weight:800;font-size:11px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .rec-day-btn.active{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 12%,var(--surface));color:var(--blue)}
+  .rec-actions{display:flex;gap:8px;margin-top:4px}
+
+  /* Delete recurrent modal */
+  .del-modal{background:var(--bg);border-radius:20px;padding:20px;max-width:340px;width:100%;text-align:center}
+  .del-modal h3{margin:0 0 8px;font-size:17px}
+  .del-modal p{font-size:13px;color:var(--text-muted);margin:0 0 18px}
+  .del-modal-actions{display:flex;flex-direction:column;gap:8px}
+  .del-from-row{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;text-align:left}
+  .del-from-row label{font-size:12px;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+  .del-from-row input{background:var(--surface);border:2px solid var(--border);border-bottom-width:3px;border-radius:12px;padding:10px 12px;font-family:inherit;font-weight:700;font-size:14px;color:var(--text);outline:none;width:100%}
+  .del-from-row input:focus{border-color:var(--blue)}
   .login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;z-index:300}
   .login-card{width:100%;max-width:360px;display:flex;flex-direction:column;align-items:center;gap:16px}
   .login-card .logo{font-size:64px;line-height:1}
@@ -206,13 +261,28 @@
 
     <!-- WEEK -->
     <section class="view" id="view-week">
-      <div class="week-nav">
-        <button id="weekPrev" aria-label="Previous week">‹</button>
-        <div class="week-nav-title" id="weekTitle">This Week</div>
-        <button id="weekNext" aria-label="Next week">›</button>
+      <div class="week-view-toggle">
+        <button class="week-view-btn active" id="btnViewWeek">Week</button>
+        <button class="week-view-btn" id="btnViewMonth">Month</button>
       </div>
-      <div class="week-strip" id="weekStrip"></div>
-      <div id="dayDetail"></div>
+      <div id="weekPanel">
+        <div class="week-nav">
+          <button id="weekPrev" aria-label="Previous week">‹</button>
+          <div class="week-nav-title" id="weekTitle">This Week</div>
+          <button id="weekNext" aria-label="Next week">›</button>
+        </div>
+        <div class="week-strip" id="weekStrip"></div>
+        <div id="weekTasksAll"></div>
+      </div>
+      <div id="monthPanel" style="display:none">
+        <div class="week-nav">
+          <button id="calPrev" aria-label="Previous month">‹</button>
+          <div class="week-nav-title" id="calTitle"></div>
+          <button id="calNext" aria-label="Next month">›</button>
+        </div>
+        <div class="cal-header" id="calHeader"></div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
     </section>
 
     <!-- EDIT -->
@@ -226,7 +296,8 @@
       </div>
       <div id="editList"></div>
       <div class="add-row" id="addRowWrap">
-        <input id="newTaskInput" type="text" placeholder="New task (e.g. Read 20 min)" maxlength="80" />
+        <input id="newTaskInput" type="text" placeholder="New task..." maxlength="80" />
+        <button id="addRecBtn" aria-label="Make recurrent" style="background:var(--surface);color:var(--blue);border:2px solid var(--border);border-bottom:3px solid var(--border);border-radius:14px;width:54px;font-size:18px;font-weight:900;cursor:pointer">↻</button>
         <button id="addTaskBtn" aria-label="Add task">+</button>
       </div>
       <div class="meta" id="lastEdit"></div>
@@ -234,7 +305,7 @@
   </main>
 
   <nav class="bottom-nav">
-    <button class="nav-btn active" data-view="today"><span class="ic">📅</span>Today</button>
+    <button class="nav-btn active" data-view="today"><span class="ic">☀️</span>Day</button>
     <button class="nav-btn" data-view="week"><span class="ic">🗓️</span>Week</button>
     <button class="nav-btn" data-view="edit"><span class="ic">⚙️</span>Edit</button>
   </nav>
@@ -305,9 +376,10 @@ function showLoginScreen(){
 const defaultState = {
   dayTasks: {},
   records: {},
+  recurrents: [],
   streak: 0,
   bestStreak: 0,
-  theme: 'auto',
+  theme: 'light',
   onboarded: false,
 };
 let state = structuredClone(defaultState);
@@ -324,6 +396,8 @@ function startSync(username){
   dbUnsubscribe = onValue(userRef, snapshot => {
     const data = snapshot.val();
     state = data ? {...structuredClone(defaultState), ...data} : structuredClone(defaultState);
+    projectRecurrents();
+    applyTheme();
     recomputeStreaks();
     render();
     if(!state.onboarded) showOnboarding();
@@ -345,6 +419,201 @@ function startOfWeek(d){
 }
 function longDate(d){
   return d.toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric', year:'numeric'});
+}
+
+/* ============== RECURRENT LOGIC ============== */
+const RECURRENT_DAYS_AHEAD = 180;
+
+function projectRecurrents(){
+  if(!state.recurrents || !state.recurrents.length) return;
+  if(!state.dayTasks) state.dayTasks = {};
+  const today = new Date(); today.setHours(0,0,0,0);
+  state.recurrents.forEach(rule => {
+    const start = parseDate(rule.startDate);
+    for(let i = 0; i <= RECURRENT_DAYS_AHEAD; i++){
+      const d = addDays(today, i);
+      if(d < start) continue;
+      if(rule.endDate && d > parseDate(rule.endDate)) continue;
+      const ds = fmtDate(d);
+      let matches = false;
+      if(rule.type === 'weekdays'){
+        // getDay(): 0=Sun,1=Mon...6=Sat — rule.weekdays stores 0=Mon..6=Sun
+        const jsDay = d.getDay();
+        const appDay = jsDay === 0 ? 6 : jsDay - 1;
+        matches = rule.weekdays.includes(appDay);
+      } else {
+        // every X days/weeks from startDate
+        const diffMs = d - start;
+        const diffDays = Math.round(diffMs / 86400000);
+        const interval = rule.type === 'weeks' ? rule.every * 7 : rule.every;
+        matches = diffDays % interval === 0;
+      }
+      if(!matches) continue;
+      if(!state.dayTasks[ds]) state.dayTasks[ds] = [];
+      const already = state.dayTasks[ds].some(t => t.recurrentId === rule.id);
+      if(!already) state.dayTasks[ds].push({ id: 't_'+rule.id+'_'+ds, name: rule.name, recurrentId: rule.id });
+    }
+  });
+}
+
+function removeRecurrentFromFuture(ruleId, fromDate){
+  if(!state.dayTasks) return;
+  const from = parseDate(fromDate);
+  Object.keys(state.dayTasks).forEach(ds => {
+    const d = parseDate(ds);
+    if(d >= from){
+      state.dayTasks[ds] = state.dayTasks[ds].filter(t => t.recurrentId !== ruleId);
+      if(state.dayTasks[ds].length === 0) delete state.dayTasks[ds];
+    }
+  });
+}
+
+let pendingRecurrent = null; // stores config while user types the name
+
+function showRecurrentModal(prefillName){
+  const existing = document.getElementById('recModal');
+  if(existing) existing.remove();
+
+  let selType = 'weekdays';
+  let selEvery = 1;
+  let selWeekdays = [];
+  // pre-select today's weekday
+  const todayAppDay = (new Date().getDay() + 6) % 7;
+  selWeekdays = [todayAppDay];
+
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg'; bg.id = 'recModal';
+  bg.innerHTML = `
+    <div class="rec-modal">
+      <h3>Repeat task</h3>
+      <div class="rec-section">
+        <div class="rec-label">Repeat type</div>
+        <div class="rec-type-row">
+          <button class="rec-type-btn active" data-type="weekdays">Days of week</button>
+          <button class="rec-type-btn" data-type="days">Daily</button>
+          <button class="rec-type-btn" data-type="weeks">Weekly</button>
+        </div>
+      </div>
+      <div class="rec-section" id="recWeekdaysSection">
+        <div class="rec-label">Select days</div>
+        <div class="rec-days-row">
+          ${['Mo','Tu','We','Th','Fr','Sa','Su'].map((d,i)=>`<button class="rec-day-btn${i===todayAppDay?' active':''}" data-day="${i}">${d}</button>`).join('')}
+        </div>
+      </div>
+      <div class="rec-section" id="recEverySection" style="display:none">
+        <div class="rec-label" id="recEveryLabel">Repeat each</div>
+        <div class="rec-every-row">
+          <input type="number" id="recEveryInput" min="1" max="99" value="1" />
+          <span id="recEveryUnit">days</span>
+        </div>
+      </div>
+      <div class="rec-section">
+        <div class="rec-label">End</div>
+        <div class="rec-end-row">
+          <button class="rec-end-btn active" id="recEndNever">No end</button>
+          <button class="rec-end-btn" id="recEndDate">End date</button>
+        </div>
+        <input type="date" class="rec-end-date" id="recEndDateInput" style="display:none" />
+      </div>
+      <div class="rec-actions">
+        <button class="btn secondary" id="recCancel" style="flex:1">Cancel</button>
+        <button class="btn" id="recConfirm" style="flex:1">Save</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(bg);
+
+  // type toggle
+  bg.querySelectorAll('.rec-type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      bg.querySelectorAll('.rec-type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selType = btn.dataset.type;
+      bg.querySelector('#recWeekdaysSection').style.display = selType === 'weekdays' ? '' : 'none';
+      bg.querySelector('#recEverySection').style.display = selType !== 'weekdays' ? '' : 'none';
+      bg.querySelector('#recEveryUnit').textContent = selType === 'weeks' ? 'weeks' : 'days';
+    });
+  });
+
+  // end date toggle
+  let selEndDate = null;
+  bg.querySelector('#recEndNever').addEventListener('click', () => {
+    selEndDate = null;
+    bg.querySelector('#recEndNever').classList.add('active');
+    bg.querySelector('#recEndDate').classList.remove('active');
+    bg.querySelector('#recEndDateInput').style.display = 'none';
+  });
+  bg.querySelector('#recEndDate').addEventListener('click', () => {
+    bg.querySelector('#recEndDate').classList.add('active');
+    bg.querySelector('#recEndNever').classList.remove('active');
+    bg.querySelector('#recEndDateInput').style.display = '';
+    bg.querySelector('#recEndDateInput').focus();
+  });
+  bg.querySelector('#recEndDateInput').addEventListener('change', e => { selEndDate = e.target.value || null; });
+
+  // weekday toggle
+  bg.querySelectorAll('.rec-day-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const day = parseInt(btn.dataset.day);
+      if(selWeekdays.includes(day)) selWeekdays = selWeekdays.filter(d => d !== day);
+      else selWeekdays.push(day);
+      btn.classList.toggle('active', selWeekdays.includes(day));
+    });
+  });
+
+  bg.querySelector('#recCancel').addEventListener('click', () => bg.remove());
+
+  bg.querySelector('#recConfirm').addEventListener('click', () => {
+    const name = prefillName || $('newTaskInput').value.trim();
+    if(!name){ toast('Enter a task name first'); return; }
+    if(selType === 'weekdays' && selWeekdays.length === 0){ toast('Select at least one day'); return; }
+    selEvery = parseInt(bg.querySelector('#recEveryInput')?.value) || 1;
+
+    const rule = {
+      id: 'r_'+Date.now(),
+      name,
+      type: selType,
+      every: selEvery,
+      weekdays: selWeekdays,
+      startDate: editDay,
+      endDate: selEndDate || null,
+    };
+    if(!state.recurrents) state.recurrents = [];
+    state.recurrents.push(rule);
+    projectRecurrents();
+    recomputeStreaks();
+    save();
+    $('newTaskInput').value = '';
+    bg.remove();
+  });
+}
+
+function showDeleteRecurrentModal(task, dayStr, idx){
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.innerHTML = `
+    <div class="del-modal">
+      <h3>Delete recurring task</h3>
+      <p>"${escapeHtml(task.name)}"</p>
+      <div class="del-modal-actions">
+        <button class="btn secondary" id="delOne">Only this day</button>
+        <button class="btn danger" id="delAll">Delete all</button>
+        <button class="btn secondary" id="delCancel">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(bg);
+  bg.querySelector('#delCancel').addEventListener('click', () => bg.remove());
+  bg.querySelector('#delOne').addEventListener('click', () => {
+    state.dayTasks[dayStr].splice(idx, 1);
+    if(!state.dayTasks[dayStr].length) delete state.dayTasks[dayStr];
+    recomputeStreaks(); save(); bg.remove();
+  });
+  bg.querySelector('#delAll').addEventListener('click', () => {
+    removeRecurrentFromFuture(task.recurrentId, (state.recurrents||[]).find(r=>r.id===task.recurrentId)?.startDate || dayStr);
+    state.recurrents = (state.recurrents||[]).filter(r => r.id !== task.recurrentId);
+    recomputeStreaks(); save(); bg.remove();
+  });
 }
 
 /* ============== STREAK LOGIC ============== */
@@ -383,24 +652,31 @@ function renderTop(){
 }
 
 function renderToday(justCheckedId){
-  const today = new Date();
-  $('dateHead').textContent = today.toLocaleDateString(undefined,{weekday:'long'});
-  $('dateSub').textContent = today.toLocaleDateString(undefined,{month:'long', day:'numeric', year:'numeric'});
+  const d = parseDate(todayViewDay);
+  const realToday = todayStr();
+  const isToday = todayViewDay === realToday;
+  $('dateHead').textContent = isToday ? d.toLocaleDateString(undefined,{weekday:'long'}) : d.toLocaleDateString(undefined,{weekday:'long'});
+  $('dateSub').textContent = d.toLocaleDateString(undefined,{month:'long', day:'numeric', year:'numeric'});
   const list = $('taskList'); list.innerHTML='';
   const empty = $('emptyToday'); empty.innerHTML='';
-  const dateStr = todayStr();
-  const tasks = tasksForDay(dateStr);
-  const rec = (state.records && state.records[dateStr]) || [];
+  const tasks = tasksForDay(todayViewDay);
+  const rec = (state.records && state.records[todayViewDay]) || [];
+  const isFuture = todayViewDay > realToday;
   if(tasks.length===0){
-    empty.innerHTML = `<div class="empty"><div class="empty-emoji">🎯</div><h3>No tasks for today</h3><p>Add tasks for today to start a streak.</p><button class="btn" onclick="switchView('edit')">Add Tasks</button></div>`;
+    const msg = isFuture ? 'No tasks planned for this day.' : isToday ? 'Add tasks for today to start a streak.' : 'No tasks were set for this day.';
+    const emoji = isFuture ? '📅' : isToday ? '🎯' : '📅';
+    empty.innerHTML = `<div class="empty"><div class="empty-emoji">${emoji}</div><h3>No tasks</h3><p>${msg}</p>${isToday?`<button class="btn" onclick="switchView('edit')">Add Tasks</button>`:''}</div>`;
     updateProgress(0,0); return;
   }
+  const yesterday = fmtDate(addDays(new Date(), -1));
+  const isEditable = todayViewDay === realToday || todayViewDay === yesterday;
+  const isPastReadonly = !isEditable && !isFuture;
   tasks.forEach(t=>{
     const done = rec.includes(t.id);
     const li = document.createElement('li');
-    li.className = 'task'+(done?' done':'');
-    li.innerHTML = `<div class="checkbox${done && t.id===justCheckedId ? ' just-checked' : ''}">✓</div><div class="task-name" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</div>`;
-    li.addEventListener('click', ()=>toggleTask(t.id));
+    li.className = 'task'+(done?' done':'')+(isEditable?'':' readonly')+(isPastReadonly && !done?' missed-past':'');
+    li.innerHTML = `<div class="checkbox${done && t.id===justCheckedId ? ' just-checked' : ''}">${isPastReadonly && !done ? '✗' : '✓'}</div><div class="task-name" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</div>`;
+    if(isEditable) li.addEventListener('click', ()=>toggleTaskOnDay(t.id, todayViewDay));
     list.appendChild(li);
   });
   updateProgress(rec.filter(id=>tasks.some(t=>t.id===id)).length, tasks.length);
@@ -418,10 +694,15 @@ function escapeHtml(s){ return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",
 /* Week view state */
 let weekAnchor = startOfWeek(new Date());
 let selectedDay = todayStr();
+let weekViewMode = 'week';
+let calAnchor = new Date();
 /* Edit view state */
 let editDay = todayStr();
+/* Today view state */
+let todayViewDay = todayStr();
 
 function renderWeek(justCheckedId){
+  if(weekViewMode === 'month'){ renderCalendar(); return; }
   const strip = $('weekStrip'); strip.innerHTML='';
   const today = todayStr();
   const sameWeek = fmtDate(startOfWeek(new Date()))===fmtDate(weekAnchor);
@@ -442,7 +723,83 @@ function renderWeek(justCheckedId){
     cell.addEventListener('click', ()=>{ selectedDay = ds; renderWeek(); });
     strip.appendChild(cell);
   }
-  renderDayDetail(justCheckedId);
+  renderWeekAllTasks(justCheckedId);
+}
+
+function renderWeekAllTasks(justCheckedId){
+  const wrap = $('weekTasksAll'); wrap.innerHTML='';
+  const today = todayStr();
+  const yesterday = fmtDate(addDays(new Date(), -1));
+  for(let i=0;i<7;i++){
+    const d = addDays(weekAnchor,i);
+    const ds = fmtDate(d);
+    const isToday = ds===today;
+    const isFuture = ds > today;
+    const tasks = tasksForDay(ds);
+    const rec = (state.records && state.records[ds]) || [];
+    const complete = isDayComplete(ds);
+    const missed = !complete && !isFuture && !isToday && tasks.length>0;
+    const block = document.createElement('div');
+    block.className = 'week-day-block';
+    const labelCls = 'week-day-heading-label'+(isToday?' is-today':complete?' is-complete':missed?' is-missed':'');
+    const dayLabel = d.toLocaleDateString(undefined,{weekday:'long'});
+    const dayDate = d.toLocaleDateString(undefined,{month:'short', day:'numeric'});
+    block.innerHTML = `<div class="week-day-heading"><span class="${labelCls}">${dayLabel}</span><span class="week-day-heading-date">${dayDate}</span><div class="week-day-heading-line"></div></div>`;
+    if(tasks.length===0){
+      const empty = document.createElement('div');
+      empty.className='week-no-tasks'; empty.textContent='No tasks';
+      block.appendChild(empty);
+    } else {
+      const isEditable = isToday || ds===yesterday;
+      const ul = document.createElement('ul');
+      ul.className='task-list'; ul.style.gap='6px';
+      tasks.forEach(t=>{
+        const done = rec.includes(t.id);
+        const isPastReadonly = !isEditable && !isFuture;
+        const li = document.createElement('li');
+        li.className='task'+(done?' done':'')+(isEditable?'':' readonly')+(isPastReadonly&&!done?' missed-past':'');
+        li.innerHTML=`<div class="checkbox${done&&t.id===justCheckedId?' just-checked':''}">${isPastReadonly&&!done?'✗':'✓'}</div><div class="task-name">${escapeHtml(t.name)}</div>`;
+        if(isEditable) li.addEventListener('click',()=>toggleTaskOnDay(t.id,ds));
+        ul.appendChild(li);
+      });
+      block.appendChild(ul);
+    }
+    wrap.appendChild(block);
+  }
+}
+
+function renderCalendar(){
+  const today = todayStr();
+  const y = calAnchor.getFullYear(), m = calAnchor.getMonth();
+  $('calTitle').textContent = calAnchor.toLocaleDateString(undefined,{month:'long', year:'numeric'});
+  const hdr = $('calHeader'); hdr.innerHTML='';
+  ['Mo','Tu','We','Th','Fr','Sa','Su'].forEach(d=>{ const el=document.createElement('div'); el.className='cal-dow'; el.textContent=d; hdr.appendChild(el); });
+  const grid = $('calGrid'); grid.innerHTML='';
+  const firstDay = new Date(y, m, 1);
+  const offset = (firstDay.getDay() + 6) % 7;
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  for(let i=0; i<offset; i++){ const el=document.createElement('div'); el.className='cal-cell empty'; grid.appendChild(el); }
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(y, m, day);
+    const ds = fmtDate(d);
+    const isFuture = ds > today;
+    const isToday = ds === today;
+    const tasks = tasksForDay(ds);
+    const complete = isDayComplete(ds);
+    const missed = !complete && !isFuture && !isToday && tasks.length > 0;
+    let cls = 'cal-cell';
+    if(isToday) cls += ' cal-today';
+    if(ds === selectedDay) cls += ' cal-selected';
+    if(!isFuture && !isToday && complete) cls += ' cal-complete';
+    else if(missed) cls += ' cal-missed';
+    else if(isFuture || isToday) cls += ' cal-future';
+    else cls += ' cal-notask';
+    const el = document.createElement('div');
+    el.className = cls;
+    el.textContent = day;
+    el.addEventListener('click', ()=>{ selectedDay = ds; renderCalendar(); });
+    grid.appendChild(el);
+  }
 }
 
 function renderDayDetail(justCheckedId){
@@ -503,7 +860,7 @@ function renderEdit(){
       row.innerHTML = `
         <button class="icon-btn" data-act="up" ${i===0?'disabled style="opacity:.3"':''} aria-label="Move up">↑</button>
         <button class="icon-btn" data-act="down" ${i===tasks.length-1?'disabled style="opacity:.3"':''} aria-label="Move down">↓</button>
-        <div class="name" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</div>
+        <div class="name" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}${t.recurrentId?'<span class="recurrent-badge">↻</span>':''}</div>
         <button class="icon-btn del" data-act="del" aria-label="Delete">🗑️</button>
       `;
       row.querySelectorAll('button').forEach(b=>{
@@ -512,8 +869,12 @@ function renderEdit(){
           if(!state.dayTasks) state.dayTasks = {};
           const dayTasks = state.dayTasks[editDay];
           if(act==='del'){
-            row.classList.add('removing');
-            setTimeout(()=>{ dayTasks.splice(i,1); recomputeStreaks(); save(); },220);
+            if(t.recurrentId){
+              showDeleteRecurrentModal(t, editDay, i);
+            } else {
+              row.classList.add('removing');
+              setTimeout(()=>{ dayTasks.splice(i,1); recomputeStreaks(); save(); },220);
+            }
           } else if(act==='up' && i>0){
             [dayTasks[i-1], dayTasks[i]] = [dayTasks[i], dayTasks[i-1]]; save();
           } else if(act==='down' && i<dayTasks.length-1){
@@ -528,7 +889,7 @@ function renderEdit(){
 }
 
 /* ============== ACTIONS ============== */
-function toggleTask(id){ toggleTaskOnDay(id, todayStr()); }
+function toggleTask(id){ toggleTaskOnDay(id, todayViewDay); }
 
 function toggleTaskOnDay(id, ds){
   if(!state.records) state.records = {};
@@ -557,6 +918,27 @@ function addTask(){
   save();
 }
 
+/* ============== TODAY SWIPE ============== */
+(()=>{
+  const el = $('view-today');
+  let x0 = null;
+  el.addEventListener('touchstart', e=>{ x0 = e.touches[0].clientX; }, {passive:true});
+  el.addEventListener('touchend', e=>{
+    if(x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    x0 = null;
+    if(Math.abs(dx) < 40) return;
+    todayViewDay = fmtDate(addDays(parseDate(todayViewDay), dx < 0 ? 1 : -1));
+    renderToday();
+  }, {passive:true});
+})();
+
+document.addEventListener('keydown', e=>{
+  if(!$('view-today').classList.contains('active')) return;
+  if(e.key === 'ArrowLeft') { todayViewDay = fmtDate(addDays(parseDate(todayViewDay), -1)); renderToday(); }
+  else if(e.key === 'ArrowRight') { todayViewDay = fmtDate(addDays(parseDate(todayViewDay), 1)); renderToday(); }
+});
+
 /* ============== NAV ============== */
 function switchView(name){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -566,8 +948,23 @@ function switchView(name){
 document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));
 $('weekPrev').addEventListener('click',()=>{ weekAnchor = addDays(weekAnchor,-7); renderWeek(); });
 $('weekNext').addEventListener('click',()=>{ weekAnchor = addDays(weekAnchor, 7); renderWeek(); });
+$('calPrev').addEventListener('click',()=>{ calAnchor = new Date(calAnchor.getFullYear(), calAnchor.getMonth()-1, 1); renderCalendar(); });
+$('calNext').addEventListener('click',()=>{ calAnchor = new Date(calAnchor.getFullYear(), calAnchor.getMonth()+1, 1); renderCalendar(); });
+$('btnViewWeek').addEventListener('click',()=>{
+  weekViewMode='week';
+  $('btnViewWeek').classList.add('active'); $('btnViewMonth').classList.remove('active');
+  $('weekPanel').style.display=''; $('monthPanel').style.display='none';
+  renderWeek();
+});
+$('btnViewMonth').addEventListener('click',()=>{
+  weekViewMode='month';
+  $('btnViewMonth').classList.add('active'); $('btnViewWeek').classList.remove('active');
+  $('weekPanel').style.display='none'; $('monthPanel').style.display='';
+  renderCalendar();
+});
 $('addTaskBtn').addEventListener('click', addTask);
 $('newTaskInput').addEventListener('keydown', e=>{ if(e.key==='Enter') addTask(); });
+$('addRecBtn').addEventListener('click', () => { showRecurrentModal($('newTaskInput').value.trim()); });
 $('editPrev').addEventListener('click',()=>{ editDay = fmtDate(addDays(parseDate(editDay),-1)); renderEdit(); });
 $('editNext').addEventListener('click',()=>{ editDay = fmtDate(addDays(parseDate(editDay), 1)); renderEdit(); });
 
@@ -575,12 +972,12 @@ $('editNext').addEventListener('click',()=>{ editDay = fmtDate(addDays(parseDate
 function applyTheme(){
   const root = document.documentElement;
   root.classList.remove('dark','auto');
-  if(state.theme==='dark') root.classList.add('dark');
-  else if(state.theme==='auto') root.classList.add('auto');
-  $('themeBtn').textContent = state.theme==='dark'?'☀️':'🌙';
+  const theme = (state && state.theme) ? state.theme : 'light';
+  if(theme==='dark') root.classList.add('dark');
+  $('themeBtn').textContent = theme==='dark'?'☀️':'🌙';
 }
 $('themeBtn').addEventListener('click',()=>{
-  state.theme = state.theme==='dark'?'auto':'dark';
+  state.theme = state.theme==='dark'?'light':'dark';
   applyTheme(); save();
 });
 
@@ -637,7 +1034,6 @@ function initApp(username){
   const logoutBtn = $('logoutBtn');
   logoutBtn.textContent = data.initials;
   logoutBtn.style.cssText = `background:${data.bg};color:${data.color};border:none;border-radius:50%;width:36px;height:36px;font-size:15px;font-weight:900;cursor:pointer;flex-shrink:0;`;
-  applyTheme();
   startSync(username);
 }
 
