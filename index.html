@@ -122,6 +122,11 @@
   .cal-popover{position:absolute;top:110%;left:50%;transform:translateX(-50%);background:var(--bg);border:2px solid var(--border);border-radius:12px;padding:6px;box-shadow:0 6px 20px rgba(0,0,0,.15);z-index:500;min-width:130px;display:flex;flex-direction:column;gap:4px;white-space:nowrap}
   .cal-popover::before{content:'';position:absolute;bottom:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-bottom-color:var(--border)}
   .cal-popover::after{content:'';position:absolute;bottom:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-bottom-color:var(--bg);margin-bottom:-1px}
+  .cal-popover.above{top:auto;bottom:110%}
+  .cal-popover.above::before{bottom:auto;top:100%;border-bottom-color:transparent;border-top-color:var(--border)}
+  .cal-popover.above::after{bottom:auto;top:100%;border-bottom-color:transparent;border-top-color:var(--bg);margin-bottom:0;margin-top:-1px}
+  .cal-popover.nudge-left{left:auto;right:0;transform:none}
+  .cal-popover.nudge-right{left:0;transform:none}
   .cal-cell.cal-today{border-color:var(--blue)}
   .cal-cell.cal-selected{background:var(--blue);color:#fff !important;border-color:var(--blue)}
   .cal-cell.cal-selected.cal-complete{background:var(--green-dark);border-color:var(--green-dark)}
@@ -809,7 +814,17 @@ function showCalDayPopover(cellEl, ds){
   pop.appendChild(btnAdd);
   // find the freshly rendered cell in the DOM
   const freshCell = $('calGrid').querySelector(`[data-ds="${ds}"]`);
-  if(freshCell) freshCell.appendChild(pop);
+  if(freshCell){
+    freshCell.appendChild(pop);
+    // detect if it goes off screen and adjust
+    requestAnimationFrame(()=>{
+      const pr = pop.getBoundingClientRect();
+      const navH = 80; // bottom nav height
+      if(pr.bottom > window.innerHeight - navH) pop.classList.add('above');
+      if(pr.left < 4) pop.classList.add('nudge-right');
+      else if(pr.right > window.innerWidth - 4) pop.classList.add('nudge-left');
+    });
+  }
   setTimeout(()=>{ document.addEventListener('click', ()=>{ pop.remove(); calSelectedDay = null; renderCalendar(); }, {once:true}); }, 0);
 }
 
