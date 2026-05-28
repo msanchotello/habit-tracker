@@ -32,14 +32,6 @@
     --shadow: 0 4px 0 rgba(0,0,0,0.08);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
   }
-  @media (prefers-color-scheme: dark){
-    :root.auto{ }
-  }
-  :root.dark{
-    --bg:#131F24; --surface:#1F2C32; --surface-2:#283A40;
-    --text:#F1F7FB; --text-muted:#8AA0A8; --border:#2C3E45;
-    --shadow:0 4px 0 rgba(0,0,0,0.4);
-  }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Nunito',system-ui,-apple-system,sans-serif;font-weight:700;overscroll-behavior:none}
   body{min-height:100vh;min-height:100dvh}
@@ -120,7 +112,9 @@
   .cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
   .cal-dow{text-align:center;font-size:10px;font-weight:800;color:var(--text-muted);text-transform:uppercase;padding:4px 0}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:16px}
-  .cal-cell{aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;cursor:pointer;border:2px solid transparent}
+  .cal-cell{position:relative;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;border:2px solid transparent}
+  .cal-cell::before{content:'';display:block;padding-bottom:100%}
+  .cal-cell-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
   .cal-cell.empty{cursor:default}
   .cal-cell.cal-today{border-color:var(--blue)}
   .cal-cell.cal-selected{background:var(--blue);color:#fff !important;border-color:var(--blue)}
@@ -244,7 +238,7 @@
         <div class="streak-sub">Best: <span id="bestNum">0</span></div>
       </div>
     </div>
-    <button class="theme-btn" id="themeBtn" aria-label="Toggle theme">🌙</button>
+    <button class="theme-btn" id="themeBtn" aria-label="Toggle theme" style="display:none">🌙</button>
   <button class="theme-btn" id="logoutBtn" aria-label="Log out" style="font-size:14px">👤</button>
   </header>
 
@@ -796,7 +790,7 @@ function renderCalendar(){
     else cls += ' cal-notask';
     const el = document.createElement('div');
     el.className = cls;
-    el.textContent = day;
+    el.innerHTML = `<div class="cal-cell-inner">${day}</div>`;
     el.addEventListener('click', ()=>{ selectedDay = ds; renderCalendar(); });
     grid.appendChild(el);
   }
@@ -920,13 +914,24 @@ function addTask(){
 
 /* ============== TODAY SWIPE ============== */
 (()=>{
-  const el = $('view-today');
-  let x0 = null;
-  el.addEventListener('touchstart', e=>{ x0 = e.touches[0].clientX; }, {passive:true});
-  el.addEventListener('touchend', e=>{
+  const el = document.querySelector('.content');
+  let x0 = null, y0 = null, swiping = false;
+  el.addEventListener('touchstart', e=>{
+    if(!$('view-today').classList.contains('active')) return;
+    x0 = e.touches[0].clientX;
+    y0 = e.touches[0].clientY;
+    swiping = false;
+  }, {passive:true});
+  el.addEventListener('touchmove', e=>{
     if(x0 === null) return;
+    const dx = Math.abs(e.touches[0].clientX - x0);
+    const dy = Math.abs(e.touches[0].clientY - y0);
+    if(!swiping && dx > dy && dx > 8) swiping = true;
+  }, {passive:true});
+  el.addEventListener('touchend', e=>{
+    if(x0 === null || !swiping) { x0 = null; return; }
     const dx = e.changedTouches[0].clientX - x0;
-    x0 = null;
+    x0 = null; swiping = false;
     if(Math.abs(dx) < 40) return;
     todayViewDay = fmtDate(addDays(parseDate(todayViewDay), dx < 0 ? 1 : -1));
     renderToday();
@@ -976,10 +981,7 @@ function applyTheme(){
   if(theme==='dark') root.classList.add('dark');
   $('themeBtn').textContent = theme==='dark'?'☀️':'🌙';
 }
-$('themeBtn').addEventListener('click',()=>{
-  state.theme = state.theme==='dark'?'light':'dark';
-  applyTheme(); save();
-});
+
 
 /* ============== CELEBRATIONS ============== */
 function pulseFlame(){
