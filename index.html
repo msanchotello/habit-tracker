@@ -108,14 +108,20 @@
   .day-label{font-size:9px;color:var(--text-muted);font-weight:800;text-transform:uppercase;line-height:1}
   .day-num{font-size:16px;font-weight:900;margin:2px 0;line-height:1;color:var(--text)}
   .day-cell.past .day-label,.day-cell.past .day-num{color:var(--text-muted);opacity:.5}
-  /* Calendar month view */
+  /* Calendar day popover */
+  .cal-popover{position:fixed;background:var(--bg);border:2px solid var(--border);border-radius:14px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:500;min-width:160px;display:flex;flex-direction:column;gap:6px}
+  .cal-popover-date{font-size:12px;color:var(--text-muted);font-weight:800;padding:2px 6px 6px;border-bottom:2px solid var(--border);margin-bottom:2px}
+  .cal-popover-btn{background:var(--surface);border:2px solid var(--border);border-bottom-width:3px;border-radius:10px;padding:10px 14px;font-family:inherit;font-weight:800;font-size:13px;color:var(--text);cursor:pointer;text-align:left}
   .cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
   .cal-dow{text-align:center;font-size:10px;font-weight:800;color:var(--text-muted);text-transform:uppercase;padding:4px 0}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:16px}
-  .cal-cell{border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;border:2px solid transparent;display:flex;align-items:center;justify-content:center}
+  .cal-cell{position:relative;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;border:2px solid transparent;display:flex;align-items:center;justify-content:center}
   .cal-cell.empty{opacity:0;pointer-events:none}
   .cal-cell-inner{display:flex;align-items:center;justify-content:center}
   .cal-cell.empty{cursor:default}
+  .cal-popover{position:absolute;top:110%;left:50%;transform:translateX(-50%);background:var(--bg);border:2px solid var(--border);border-radius:12px;padding:6px;box-shadow:0 6px 20px rgba(0,0,0,.15);z-index:500;min-width:130px;display:flex;flex-direction:column;gap:4px;white-space:nowrap}
+  .cal-popover::before{content:'';position:absolute;bottom:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-bottom-color:var(--border)}
+  .cal-popover::after{content:'';position:absolute;bottom:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-bottom-color:var(--bg);margin-bottom:-1px}
   .cal-cell.cal-today{border-color:var(--blue)}
   .cal-cell.cal-selected{background:var(--blue);color:#fff !important;border-color:var(--blue)}
   .cal-cell.cal-selected.cal-complete{background:var(--green-dark);border-color:var(--green-dark)}
@@ -199,7 +205,7 @@
   .rec-end-row{display:flex;gap:8px;margin-top:8px}
   .rec-end-btn{flex:1;padding:10px;border:2px solid var(--border);border-bottom-width:3px;border-radius:12px;background:var(--surface);font-family:inherit;font-weight:800;font-size:13px;color:var(--text);cursor:pointer}
   .rec-end-btn.active{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 12%,var(--surface));color:var(--blue)}
-  .rec-end-date{width:100%;margin-top:8px;background:var(--surface);border:2px solid var(--border);border-bottom-width:3px;border-radius:12px;padding:10px 12px;font-family:inherit;font-weight:700;font-size:14px;color:var(--text);outline:none}
+  .rec-end-date{width:100%;margin-top:8px;background:var(--surface);border:2px solid var(--border);border-bottom-width:3px;border-radius:12px;padding:10px 12px;font-family:inherit;font-weight:700;font-size:14px;color:var(--text);outline:none;box-sizing:border-box}
   .rec-end-date:focus{border-color:var(--blue)}
   .rec-days-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
   .rec-day-btn{aspect-ratio:1;border:2px solid var(--border);border-bottom-width:3px;border-radius:10px;background:var(--surface);font-family:inherit;font-weight:800;font-size:11px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center}
@@ -246,8 +252,16 @@
   <main class="content">
     <!-- TODAY -->
     <section class="view active" id="view-today">
-      <div class="date-head" id="dateHead"></div>
-      <div class="date-sub" id="dateSub"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <div class="date-head" id="dateHead"></div>
+          <div class="date-sub" id="dateSub"></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+          <button id="backTodayBtn" class="btn secondary" style="display:none;padding:6px 14px;font-size:12px;min-height:36px">Today</button>
+          <button id="dayAddBtn" class="btn secondary" style="padding:6px 14px;font-size:18px;min-height:36px;width:36px">+</button>
+        </div>
+      </div>
       <div class="progress-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
       <div class="progress-text"><span id="progressLabel">0/0 done</span><span id="progressPct">0%</span></div>
       <div class="today-slider" id="todaySlider">
@@ -280,7 +294,9 @@
           <button id="calNext" aria-label="Next month">›</button>
         </div>
         <div class="cal-header" id="calHeader"></div>
-        <div class="cal-grid" id="calGrid"></div>
+        <div style="position:relative" id="calGridWrap">
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
       </div>
     </section>
 
@@ -654,8 +670,12 @@ function renderToday(justCheckedId){
   const d = parseDate(todayViewDay);
   const realToday = todayStr();
   const isToday = todayViewDay === realToday;
-  $('dateHead').textContent = isToday ? d.toLocaleDateString(undefined,{weekday:'long'}) : d.toLocaleDateString(undefined,{weekday:'long'});
+  $('dateHead').textContent = d.toLocaleDateString(undefined,{weekday:'long'});
   $('dateSub').textContent = d.toLocaleDateString(undefined,{month:'long', day:'numeric', year:'numeric'});
+  const backBtn = $('backTodayBtn');
+  backBtn.style.display = isToday ? 'none' : '';
+  backBtn.onclick = ()=>{ todayViewDay = todayStr(); renderToday(); };
+  $('dayAddBtn').onclick = ()=>{ editDay = todayViewDay; switchView('edit'); renderEdit(); };
   const list = $('taskList'); list.innerHTML='';
   const empty = $('emptyToday'); empty.innerHTML='';
   const tasks = tasksForDay(todayViewDay);
@@ -695,6 +715,7 @@ let weekAnchor = startOfWeek(new Date());
 let selectedDay = todayStr();
 let weekViewMode = 'week';
 let calAnchor = new Date();
+let calSelectedDay = null;
 /* Edit view state */
 let editDay = todayStr();
 /* Today view state */
@@ -767,6 +788,31 @@ function renderWeekAllTasks(justCheckedId){
   }
 }
 
+function showCalDayPopover(cellEl, ds){
+  document.querySelectorAll('.cal-popover').forEach(p=>p.remove());
+  calSelectedDay = ds;
+  renderCalendar();
+  const d = parseDate(ds);
+  const label = d.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
+  const pop = document.createElement('div');
+  pop.className = 'cal-popover';
+  pop.innerHTML = `<div class="cal-popover-date">${label}</div>`;
+  const btnView = document.createElement('button');
+  btnView.className = 'cal-popover-btn';
+  btnView.textContent = 'View tasks';
+  btnView.onclick = (e)=>{ e.stopPropagation(); pop.remove(); todayViewDay = ds; switchView('today'); renderToday(); };
+  const btnAdd = document.createElement('button');
+  btnAdd.className = 'cal-popover-btn';
+  btnAdd.textContent = 'Add task';
+  btnAdd.onclick = (e)=>{ e.stopPropagation(); pop.remove(); editDay = ds; switchView('edit'); renderEdit(); };
+  pop.appendChild(btnView);
+  pop.appendChild(btnAdd);
+  // find the freshly rendered cell in the DOM
+  const freshCell = $('calGrid').querySelector(`[data-ds="${ds}"]`);
+  if(freshCell) freshCell.appendChild(pop);
+  setTimeout(()=>{ document.addEventListener('click', ()=>{ pop.remove(); calSelectedDay = null; renderCalendar(); }, {once:true}); }, 0);
+}
+
 function renderCalendar(){
   const today = todayStr();
   const y = calAnchor.getFullYear(), m = calAnchor.getMonth();
@@ -788,21 +834,27 @@ function renderCalendar(){
     const missed = !complete && !isFuture && !isToday && tasks.length > 0;
     let cls = 'cal-cell';
     if(isToday) cls += ' cal-today';
-    if(ds === selectedDay) cls += ' cal-selected';
+    if(ds === calSelectedDay) cls += ' cal-selected';
     if(!isFuture && !isToday && complete) cls += ' cal-complete';
     else if(missed) cls += ' cal-missed';
     else if(isFuture || isToday) cls += ' cal-future';
     else cls += ' cal-notask';
     const el = document.createElement('div');
     el.className = cls;
+    el.dataset.ds = ds;
     el.innerHTML = `<div class="cal-cell-inner">${day}</div>`;
-    el.addEventListener('click', ()=>{ selectedDay = ds; renderCalendar(); });
+    el.addEventListener('click', e=>{ e.stopPropagation(); showCalDayPopover(el, ds); });
     grid.appendChild(el);
   }
   // set row height = cell width for square cells
   requestAnimationFrame(()=>{
+    const grid = $('calGrid');
     const cellW = grid.querySelector('.cal-cell:not(.empty)')?.offsetWidth || grid.offsetWidth/7;
-    grid.style.gridAutoRows = cellW + 'px';
+    if(cellW > 0) grid.style.gridAutoRows = cellW + 'px';
+    else setTimeout(()=>{
+      const cw = grid.querySelector('.cal-cell:not(.empty)')?.offsetWidth || grid.offsetWidth/7;
+      if(cw > 0) grid.style.gridAutoRows = cw + 'px';
+    }, 50);
   });
 }
 
@@ -974,6 +1026,7 @@ function switchView(name){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   $('view-'+name).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
+  if(name === 'week' && weekViewMode === 'month') renderCalendar();
 }
 document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));
 $('weekPrev').addEventListener('click',()=>{ weekAnchor = addDays(weekAnchor,-7); renderWeek(); });
