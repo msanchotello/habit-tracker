@@ -114,6 +114,7 @@
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:16px}
   .cal-cell{position:relative;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;border:2px solid transparent}
   .cal-cell::before{content:'';display:block;padding-bottom:100%}
+  .cal-cell.empty::before{display:none}
   .cal-cell-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
   .cal-cell.empty{cursor:default}
   .cal-cell.cal-today{border-color:var(--blue)}
@@ -154,7 +155,8 @@
   .add-row button:active{transform:translateY(2px);border-bottom-width:2px}
   .meta{font-size:12px;color:var(--text-muted);margin-top:18px;text-align:center;font-weight:700}
 
-  /* Bottom nav */
+  .today-slider{overflow:hidden;position:relative}
+  .today-slide{transition:transform .3s cubic-bezier(.4,0,.2,1);will-change:transform}
   .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:2px solid var(--border);display:flex;justify-content:space-around;padding:10px 0 calc(16px + var(--safe-bottom));max-width:480px;margin:0 auto;z-index:20}
   .nav-btn{flex:1;background:transparent;border:none;padding:6px 4px;cursor:pointer;color:var(--text-muted);font-family:inherit;font-weight:800;font-size:10px;display:flex;flex-direction:column;align-items:center;gap:3px;text-transform:uppercase;letter-spacing:.5px;min-height:44px}
   .nav-btn .ic{font-size:22px}
@@ -249,8 +251,12 @@
       <div class="date-sub" id="dateSub"></div>
       <div class="progress-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
       <div class="progress-text"><span id="progressLabel">0/0 done</span><span id="progressPct">0%</span></div>
-      <ul class="task-list" id="taskList"></ul>
-      <div id="emptyToday"></div>
+      <div class="today-slider" id="todaySlider">
+        <div class="today-slide" id="todaySlide">
+          <ul class="task-list" id="taskList"></ul>
+          <div id="emptyToday"></div>
+        </div>
+      </div>
     </section>
 
     <!-- WEEK -->
@@ -921,20 +927,35 @@ function addTask(){
     x0 = e.touches[0].clientX;
     y0 = e.touches[0].clientY;
     swiping = false;
+    const s = $('todaySlide'); if(s) s.style.transition = 'none';
   }, {passive:true});
   el.addEventListener('touchmove', e=>{
     if(x0 === null) return;
     const dx = Math.abs(e.touches[0].clientX - x0);
     const dy = Math.abs(e.touches[0].clientY - y0);
     if(!swiping && dx > dy && dx > 8) swiping = true;
+    if(swiping){ const s = $('todaySlide'); if(s) s.style.transform = `translateX(${e.touches[0].clientX - x0}px)`; }
   }, {passive:true});
   el.addEventListener('touchend', e=>{
-    if(x0 === null || !swiping) { x0 = null; return; }
+    const s = $('todaySlide');
+    if(x0 === null || !swiping){ x0 = null; if(s){ s.style.transition=''; s.style.transform=''; } return; }
     const dx = e.changedTouches[0].clientX - x0;
     x0 = null; swiping = false;
-    if(Math.abs(dx) < 40) return;
-    todayViewDay = fmtDate(addDays(parseDate(todayViewDay), dx < 0 ? 1 : -1));
-    renderToday();
+    if(Math.abs(dx) < 40){ if(s){ s.style.transition=''; s.style.transform=''; } return; }
+    const dir = dx < 0 ? 1 : -1;
+    const w = el.offsetWidth;
+    s.style.transition = 'transform .25s cubic-bezier(.4,0,.2,1)';
+    s.style.transform = `translateX(${dir * -w}px)`;
+    setTimeout(()=>{
+      todayViewDay = fmtDate(addDays(parseDate(todayViewDay), -dir));
+      renderToday();
+      s.style.transition = 'none';
+      s.style.transform = `translateX(${dir * w}px)`;
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        s.style.transition = 'transform .25s cubic-bezier(.4,0,.2,1)';
+        s.style.transform = '';
+      }));
+    }, 250);
   }, {passive:true});
 })();
 
