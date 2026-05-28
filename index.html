@@ -111,11 +111,9 @@
   /* Calendar month view */
   .cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
   .cal-dow{text-align:center;font-size:10px;font-weight:800;color:var(--text-muted);text-transform:uppercase;padding:4px 0}
-  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:16px}
-  .cal-cell{position:relative;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;border:2px solid transparent}
-  .cal-cell::before{content:'';display:block;padding-bottom:100%}
-  .cal-cell.empty::before{display:none}
-  .cal-cell-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:40px;gap:3px;margin-bottom:16px}
+  .cal-cell{border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;border:2px solid transparent;display:flex;align-items:center;justify-content:center}
+  .cal-cell-inner{display:flex;align-items:center;justify-content:center;width:100%;height:100%}
   .cal-cell.empty{cursor:default}
   .cal-cell.cal-today{border-color:var(--blue)}
   .cal-cell.cal-selected{background:var(--blue);color:#fff !important;border-color:var(--blue)}
@@ -947,7 +945,7 @@ function addTask(){
     s.style.transition = 'transform .25s cubic-bezier(.4,0,.2,1)';
     s.style.transform = `translateX(${dir * -w}px)`;
     setTimeout(()=>{
-      todayViewDay = fmtDate(addDays(parseDate(todayViewDay), -dir));
+      todayViewDay = fmtDate(addDays(parseDate(todayViewDay), dir));
       renderToday();
       s.style.transition = 'none';
       s.style.transform = `translateX(${dir * w}px)`;
