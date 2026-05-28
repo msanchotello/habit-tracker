@@ -112,8 +112,8 @@
   .cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
   .cal-dow{text-align:center;font-size:10px;font-weight:800;color:var(--text-muted);text-transform:uppercase;padding:4px 0}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:16px}
-  .cal-cell{aspect-ratio:1;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;border:2px solid transparent;display:flex;align-items:center;justify-content:center;min-height:0;min-width:0}
-  .cal-cell.empty{visibility:hidden}
+  .cal-cell{border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;border:2px solid transparent;display:flex;align-items:center;justify-content:center}
+  .cal-cell.empty{opacity:0;pointer-events:none}
   .cal-cell-inner{display:flex;align-items:center;justify-content:center}
   .cal-cell.empty{cursor:default}
   .cal-cell.cal-today{border-color:var(--blue)}
@@ -799,6 +799,11 @@ function renderCalendar(){
     el.addEventListener('click', ()=>{ selectedDay = ds; renderCalendar(); });
     grid.appendChild(el);
   }
+  // set row height = cell width for square cells
+  requestAnimationFrame(()=>{
+    const cellW = grid.querySelector('.cal-cell:not(.empty)')?.offsetWidth || grid.offsetWidth/7;
+    grid.style.gridAutoRows = cellW + 'px';
+  });
 }
 
 function renderDayDetail(justCheckedId){
